@@ -1,0 +1,6 @@
+name = "leanlingo"
+version = "0.1.0"
+defaultTargets = ["LeanLingo"]
+
+[[lean_lib]]
+name = "LeanLingo"
