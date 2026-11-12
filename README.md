@@ -6,13 +6,18 @@ through them in your editor.
 
 ## Setup
 
-Lean is pinned by the Nix flake (`flake.lock`). The same version is listed in
-`lean-toolchain` for editors that use elan.
+Everything is pinned: the Nix flake provides elan (`flake.lock`), elan
+installs the Lean release in `lean-toolchain`, and `lake-manifest.json` pins
+Mathlib.
 
 ```sh
-nix develop      # or: direnv allow (uses .envrc)
-lake build       # passes; each unfilled `sorry` shows as a warning
+nix develop          # or: direnv allow (uses .envrc)
+lake exe cache get   # first time only: downloads prebuilt Mathlib
+lake build           # passes; each unfilled `sorry` shows as a warning
 ```
+
+Run `lake exe cache get` before opening the editor. If you skip it, the
+editor starts building Mathlib from source, which takes hours.
 
 Open the folder in VS Code with the Lean 4 extension. Start it from inside
 `nix develop` so it uses the pinned `lean`.

@@ -70,7 +70,9 @@ const header = (title) => `/-! # ${title} -/`;
 const ex = [];
 const ans = [];
 
-ex.push(`/-!
+ex.push(`import Mathlib
+
+/-!
 # LeanLingo exercises
 
 Ported from LeanLingo (https://leanlingo.org, MIT, © Kenneth Jusino),
@@ -142,11 +144,7 @@ for (const w of worlds) {
     ex.push(`namespace LeanLingo.W${n}`, '');
     // #eval refuses to run code that depends on `sorry`, so checks stay
     // commented until the definitions are filled in.
-    // `conv_lhs` is Mathlib-only; this project uses plain core Lean.
-    const code = p.starterCode
-      .replace(/^(\s*)#eval/gm, '$1-- #eval')
-      .replace(/conv_lhs => (.*)/g, 'conv => lhs; $1');
-    ex.push(code);
+    ex.push(p.starterCode.replace(/^(\s*)#eval/gm, '$1-- #eval'));
     ex.push('', `end LeanLingo.W${n}`, '');
   }
 }

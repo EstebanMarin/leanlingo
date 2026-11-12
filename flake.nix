@@ -11,8 +11,10 @@
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          # lean4 ships both `lean` and `lake`; flake.lock pins the exact version.
-          packages = [ pkgs.lean4 pkgs.nodejs ];
+          # elan installs the official Lean release named in lean-toolchain; Mathlib's
+          # prebuilt cache only works with official builds, not nixpkgs' lean4.
+          # git and curl are used by lake to fetch Mathlib and its build cache.
+          packages = [ pkgs.elan pkgs.nodejs pkgs.git pkgs.curl ];
         };
       });
     };
