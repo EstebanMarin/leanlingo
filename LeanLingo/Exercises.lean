@@ -431,6 +431,8 @@ def μ: Type := Bool
 
 #eval (λ x => x + 5) 10
 
+#check λ (α β γ : Type) (g : β → γ) (f : α → β) (x : α) => g (f x)
+
 def id' {α : Type} (a : α) : α :=
   sorry
 
