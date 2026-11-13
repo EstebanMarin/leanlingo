@@ -433,6 +433,35 @@ def μ: Type := Bool
 
 #check λ (α β γ : Type) (g : β → γ) (f : α → β) (x : α) => g (f x)
 
+def double := λ x => x * 2
+
+#check double 2
+#eval double 2
+
+def compose (α β γ : Type) (g : β → γ) (f : α → β) (x : α) : γ :=
+  g (f x)
+
+def square := λ (x: ℕ) =>  x * x
+
+#eval compose ℕ ℕ ℕ double square 3
+
+def twice_double := 
+  λ (x: ℕ) => let y := x + x; y * y
+
+#eval twice_double 4
+
+variable (α β γ : Type)
+variable (g : β → γ) (f : α → β) (h : α → α)
+variable (x : α)
+
+def compose := g (f x)
+def doTwice := h (h x)
+def doThrice := h (h (h x))
+
+#print compose
+#print doTwice
+#print doThrice
+
 def id' {α : Type} (a : α) : α :=
   sorry
 
