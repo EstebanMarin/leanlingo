@@ -462,11 +462,60 @@ def doThrice := h (h (h x))
 #print doTwice
 #print doThrice
 
+section useful
+  variable (α : Type) 
+  def cons (a : α) (as : List α) : List α :=
+  List.cons a as
+
+  #eval cons ℕ 1 [2, 3]
+
+#check cons
+#check cons ℕ
+#check cons ℝ
+#check cons ℂ
+#check cons Bool
+end useful
+
+--#eval Vector ℕ 3
+
 def id' {α : Type} (a : α) : α :=
-  sorry
+  a
 
 def const {α β : Type} (a : α) (_ : β) : α :=
-  sorry
+  a
+
+universe u v
+
+section DependentTypes
+
+variable (α : Type u)
+variable (β : α → Type v)
+variable (a : α)
+variable (b : β a)
+
+def d : (a : α) × β a :=
+  ⟨a, b⟩
+
+def w : Σ a : α, β a :=
+  Sigma.mk a b
+
+end DependentTypes 
+
+universe u v
+
+section dep_implicit
+
+variable {α : Type u}
+variable {β : α → Type v}
+
+def d (a : α) (b : β a) : (a : α) × β a :=
+  ⟨a, b⟩
+
+def w (a : α) (b : β a) : Σ a : α, β a :=
+  ⟨a, b⟩
+
+end dep_implicit
+
 
 #check @id'
 #check @const
@@ -474,6 +523,17 @@ def const {α β : Type} (a : α) (_ : β) : α :=
 -- #eval id' 5
 -- #eval id' "lean"
 -- #eval const 7 "ignored"
+
+section deeply_understand
+
+end deeply_understand
+
+def Example : Type :=
+  Σ n : ℕ, Vector ℕ n
+
+def exampleValue : Example :=
+  ⟨3, Vector.ofFn (fun i => i.val)⟩
+
 
 end LeanLingo.W2
 
