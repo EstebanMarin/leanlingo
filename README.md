@@ -46,3 +46,8 @@ The questions come from [LeanLingo](https://github.com/kjusino/leanlingo)
 by Kenneth Jusino, MIT licensed (see `THIRD_PARTY_LICENSE`). LeanLingo's
 content is based on the official Lean books: *Functional Programming in Lean*
 and *Theorem Proving in Lean 4*.
+
+## Extras
+
+- `docs/dependent-pairs.html`: an interactive walkthrough of dependent pairs
+  (Σ types). Open it in a browser.

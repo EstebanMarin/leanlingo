@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dependent Pairs in Lean</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: six step cards, one at a time, on cool proof-paper. Teal = the value you pick first; amber = the type that value chooses. */
+:root {
+  --paper: #f2f4f6;
+  --sheet: #fbfcfd;
+  --ink: #18202b;
+  --muted: #5a6573;
+  --rule: #d6dbe2;
+  --alpha: #0d7a74;
+  --alpha-soft: #d7efec;
+  --beta: #a85d00;
+  --beta-soft: #f8e8d2;
+  --bad: #b3261e;
+  --bad-soft: #f9dedc;
+  --code-bg: #e9edf2;
+  --on-accent: #ffffff;
+  --f-display: "STIX Two Text", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+    --alpha: #4fc7bd; --alpha-soft: #143532; --beta: #f0a542; --beta-soft: #3a2a12;
+    --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; --on-accent: #0b1117; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+  --alpha: #4fc7bd; --alpha-soft: #143532; --beta: #f0a542; --beta-soft: #3a2a12;
+  --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; --on-accent: #0b1117; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 16px/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+main { max-width: 720px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--f-display); font-weight: 600; margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(1.9rem, 6vw, 2.6rem); }
+h2 { font-size: 1.6rem; }
+p { margin: 0; max-width: 60ch; }
+.a { color: var(--alpha); font-weight: 600; }
+.b { color: var(--beta); font-weight: 600; }
+code, pre { font-family: var(--f-mono); font-size: 0.88em; }
+p code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+pre { margin: 0; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; min-width: 0; }
+pre .c { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* step rail */
+.rail { display: flex; gap: 6px; flex-wrap: wrap; }
+.rail button {
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px;
+  padding: 4px 12px; font-size: 0.82rem; font-weight: 500; color: var(--muted);
+}
+.rail button[aria-current="step"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.rail button.done { color: var(--alpha); border-color: var(--alpha); }
+
+/* card */
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 22px; display: grid; gap: 18px; min-width: 0; }
+.step-no { font: 600 0.75rem/1 var(--f-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.nav { display: flex; justify-content: space-between; gap: 12px; }
+.nav button { border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 8px 16px; font-weight: 500; }
+.nav button.primary { background: var(--alpha); border-color: var(--alpha); color: var(--on-accent); }
+.nav button:disabled { opacity: 0.35; cursor: default; }
+
+/* shared widgets */
+.pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick button {
+  font-family: var(--f-mono); font-weight: 600; font-size: 0.95rem;
+  border: 1.5px solid var(--rule); background: var(--paper); border-radius: 8px; padding: 8px 14px; min-height: 42px;
+}
+.pick.alpha button[aria-pressed="true"] { background: var(--alpha); border-color: var(--alpha); color: var(--on-accent); }
+.pick.beta button[aria-pressed="true"] { background: var(--beta); border-color: var(--beta); color: var(--on-accent); }
+.label { font: 600 0.75rem/1 var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.group { display: grid; gap: 8px; }
+
+.machine { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-family: var(--f-mono); font-size: 1.1rem; }
+.chip { padding: 10px 14px; border-radius: 8px; font-weight: 600; }
+.chip.a { background: var(--alpha-soft); }
+.chip.b { background: var(--beta-soft); }
+.box-fn { border: 2px dashed var(--muted); border-radius: 8px; padding: 8px 12px; color: var(--muted); font-weight: 600; }
+.arrow { color: var(--muted); }
+
+.verdict { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: start; border-radius: 8px; padding: 12px 14px; font-family: var(--f-mono); font-size: 0.88rem; }
+.verdict.yes { background: var(--alpha-soft); }
+.verdict.no { background: var(--bad-soft); }
+.verdict .sym { font-weight: 600; font-size: 1.1rem; line-height: 1.3; }
+.verdict.yes .sym { color: var(--alpha); }
+.verdict.no .sym { color: var(--bad); }
+.verdict div { overflow-wrap: anywhere; white-space: pre-wrap; }
+
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--paper); padding: 8px 14px; font-family: var(--f-mono); font-size: 0.85rem; font-weight: 600; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* vector boxes */
+.boxes { display: flex; flex-wrap: wrap; gap: 6px; min-height: 46px; align-items: center; }
+.cell { width: 42px; height: 42px; border-radius: 6px; display: grid; place-items: center; font-family: var(--f-mono); font-weight: 600; background: var(--beta-soft); color: var(--beta); }
+.cell.extra { background: var(--bad-soft); color: var(--bad); }
+.cell.hole { background: transparent; border: 2px dashed var(--bad); color: var(--bad); }
+.stepper { display: flex; gap: 8px; }
+.stepper button { width: 42px; height: 42px; border: 1px solid var(--rule); background: var(--paper); border-radius: 8px; font-size: 1.2rem; font-weight: 600; }
+
+/* sigma / pi table */
+.rows { display: grid; gap: 8px; }
+.r { display: grid; grid-template-columns: 76px 30px minmax(0, 1fr); align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--rule); font-family: var(--f-mono); font-size: 0.92rem; background: var(--paper); text-align: left; width: 100%; }
+.r.on { border-color: var(--beta); background: var(--beta-soft); }
+.r.off { opacity: 0.45; }
+.r .in { color: var(--alpha); font-weight: 600; }
+.r .out { font-weight: 600; }
+
+/* exists puzzle */
+.goal { font-family: var(--f-mono); font-size: 1.15rem; font-weight: 600; padding: 12px 14px; border-radius: 8px; background: var(--code-bg); overflow-x: auto; white-space: nowrap; }
+
+/* decoder */
+.decode { font-family: var(--f-mono); font-size: clamp(0.95rem, 3.6vw, 1.25rem); line-height: 2; background: var(--code-bg); border-radius: 8px; padding: 14px 16px; overflow-x: auto; white-space: pre; }
+.decode button { border: 0; background: transparent; padding: 1px 3px; border-radius: 4px; font: inherit; border-bottom: 2px dotted var(--muted); }
+.decode button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-bottom-color: transparent; }
+.explain { min-height: 3.4em; padding: 12px 14px; border-left: 3px solid var(--beta); background: var(--paper); border-radius: 0 8px 8px 0; }
+
+.hint { font-size: 0.88rem; color: var(--muted); }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: in 0.22s ease-out; }
+  @keyframes in { from { transform: translateY(6px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+}
+</style>
+
+<main>
+  <header class="group">
+    <h1>Dependent Pairs</h1>
+    <p>Six small experiments. Click things. Teal is the <span class="a">value</span> you pick first, amber is the <span class="b">type</span> it chooses.</p>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Steps"></nav>
+
+  <!-- 1 -->
+  <section class="card" data-step="1" data-name="Type machine">
+    <div class="step-no">Step 1 of 6</div>
+    <h2>A function that returns a type</h2>
+    <pre>def Answer : Bool → Type
+  | true  => Nat
+  | false => String</pre>
+    <div class="group">
+      <div class="label">Feed it a value</div>
+      <div class="pick alpha" id="s1-pick">
+        <button type="button" id="s1-true" data-v="true" aria-pressed="true">true</button>
+        <button type="button" id="s1-false" data-v="false">false</button>
+      </div>
+    </div>
+    <div class="machine" aria-live="polite">
+      <span class="chip a" id="s1-in">true</span><span class="arrow">→</span>
+      <span class="box-fn">Answer</span><span class="arrow">→</span>
+      <span class="chip b" id="s1-out">Nat</span>
+    </div>
+    <p>Out comes a <span class="b">type</span>, not a value. That's all <code>β : α → Type</code> means in your code.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="card" data-step="2" data-name="Build a pair" hidden>
+    <div class="step-no">Step 2 of 6</div>
+    <h2>Build a pair. Will Lean accept it?</h2>
+    <div class="seg" role="group" aria-label="Pair kind">
+      <button type="button" id="s2-dep" aria-pressed="true">(b : Bool) × Answer b</button>
+      <button type="button" id="s2-ord">Bool × Nat</button>
+    </div>
+    <div class="group">
+      <div class="label">First: a Bool</div>
+      <div class="pick alpha" id="s2-first">
+        <button type="button" id="s2-f-true" data-v="true" aria-pressed="true">true</button>
+        <button type="button" id="s2-f-false" data-v="false">false</button>
+      </div>
+    </div>
+    <div class="group">
+      <div class="label">Second: something</div>
+      <div class="pick beta" id="s2-second">
+        <button type="button" id="s2-s-42" data-v="42" aria-pressed="true">(42 : Nat)</button>
+        <button type="button" id="s2-s-hi" data-v="hi">"hi"</button>
+      </div>
+    </div>
+    <div id="s2-out" aria-live="polite"></div>
+    <p class="hint" id="s2-hint">Try all four combinations, then switch to the ordinary pair.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="card" data-step="3" data-name="Lengths" hidden>
+    <div class="step-no">Step 3 of 6</div>
+    <h2>Same idea, with lengths</h2>
+    <p><span class="b">β n</span> = <code>Vector Nat n</code>, a list of exactly <span class="a">n</span> numbers.</p>
+    <div class="group">
+      <div class="label">Pick n</div>
+      <div class="pick alpha" id="s3-n"></div>
+    </div>
+    <div class="group">
+      <div class="label">Your list</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <div class="stepper">
+          <button type="button" id="s3-minus" aria-label="Remove a number">−</button>
+          <button type="button" id="s3-plus" aria-label="Add a number">+</button>
+        </div>
+        <div class="boxes" id="s3-boxes"></div>
+      </div>
+    </div>
+    <div id="s3-out" aria-live="polite"></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="card" data-step="4" data-name="Σ vs Π" hidden>
+    <div class="step-no">Step 4 of 6</div>
+    <h2>One answer, or every answer?</h2>
+    <div class="seg" role="group" aria-label="Kind">
+      <button type="button" id="s4-sig" aria-pressed="true">Σ  pair</button>
+      <button type="button" id="s4-pi">Π  function</button>
+    </div>
+    <div class="rows" id="s4-rows">
+      <button type="button" class="r" id="s4-r-true" data-v="true"><span class="in">true</span><span class="arrow">↦</span><span class="out">(42 : Nat)</span></button>
+      <button type="button" class="r" id="s4-r-false" data-v="false"><span class="in">false</span><span class="arrow">↦</span><span class="out">"hi"</span></button>
+    </div>
+    <p class="hint" id="s4-hint"></p>
+    <pre id="s4-code"></pre>
+    <div class="verdict yes"><span class="sym">≈</span><div id="s4-logic"></div></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="card" data-step="5" data-name="∃ is a pair" hidden>
+    <div class="step-no">Step 5 of 6</div>
+    <h2>Prove it: a proof of ∃ is a pair</h2>
+    <div class="goal">∃ n : Nat, n * n = 49</div>
+    <div class="group">
+      <div class="label">Pick the witness (the first half)</div>
+      <div class="pick alpha" id="s5-n"></div>
+    </div>
+    <div id="s5-out" aria-live="polite"></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="card" data-step="6" data-name="Your code" hidden>
+    <div class="step-no">Step 6 of 6</div>
+    <h2>Now read your code</h2>
+    <p class="hint">Click each piece.</p>
+    <div class="decode" id="s6-code"><button type="button" data-k="def">def d</button> : <button type="button" data-k="sig">(<span class="a">a</span> : <span class="a">α</span>) × <span class="b">β</span> <span class="a">a</span></button> := <button type="button" data-k="mk">⟨a, b⟩</button>
+<button type="button" data-k="def">def w</button> : <button type="button" data-k="sigma">Σ <span class="a">a</span> : <span class="a">α</span>, <span class="b">β</span> <span class="a">a</span></button> := <button type="button" data-k="smk">Sigma.mk a b</button>
+
+<button type="button" data-k="alpha">variable (α : Type u)</button>
+<button type="button" data-k="beta">variable (β : α → Type v)</button>
+<button type="button" data-k="b">variable (b : β a)</button></div>
+    <div class="explain" id="s6-explain" aria-live="polite"></div>
+  </section>
+
+  <div class="nav">
+    <button type="button" id="prev">← Back</button>
+    <button type="button" id="next" class="primary">Next →</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function press(group, btn) {
+    group.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+  }
+  function verdict(ok, text) {
+    var d = document.createElement('div');
+    d.className = 'verdict ' + (ok ? 'yes' : 'no');
+    var s = document.createElement('span'); s.className = 'sym'; s.textContent = ok ? '✓' : '✗';
+    var t = document.createElement('div'); t.textContent = text;
+    d.append(s, t);
+    return d;
+  }
+
+  /* ---------- stepper ---------- */
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var rail = $('rail');
+  var cur = 0;
+  var seen = {};
+  cards.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 'rail-' + (i + 1);
+    b.textContent = (i + 1) + '. ' + c.dataset.name;
+    b.addEventListener('click', function () { go(i); });
+    rail.append(b);
+  });
+  function go(i) {
+    seen[cur] = true;
+    cur = Math.max(0, Math.min(cards.length - 1, i));
+    cards.forEach(function (c, j) { c.hidden = j !== cur; });
+    rail.querySelectorAll('button').forEach(function (b, j) {
+      if (j === cur) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+      b.classList.toggle('done', !!seen[j] && j !== cur);
+    });
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === cards.length - 1;
+    try { localStorage.setItem('dp-step', String(cur)); } catch (e) {}
+  }
+  $('prev').addEventListener('click', function () { go(cur - 1); });
+  $('next').addEventListener('click', function () { go(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('input,textarea')) return;
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+
+  /* ---------- 1. type machine ---------- */
+  var s1 = $('s1-pick');
+  s1.querySelectorAll('button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      press(s1, b);
+      $('s1-in').textContent = b.dataset.v;
+      $('s1-out').textContent = b.dataset.v === 'true' ? 'Nat' : 'String';
+    });
+  });
+
+  /* ---------- 2. build a pair ---------- */
+  var st2 = { dep: true, first: 'true', second: '42' };
+  function draw2() {
+    var val = st2.second === '42' ? '(42 : Nat)' : '"hi"';
+    var has = st2.second === '42' ? 'Nat' : 'String';
+    var out = $('s2-out');
+    if (st2.dep) {
+      var want = st2.first === 'true' ? 'Nat' : 'String';
+      var code = '⟨' + st2.first + ', ' + val + '⟩ : (b : Bool) × Answer b';
+      out.replaceChildren(has === want
+        ? verdict(true, code + '\n\nAnswer ' + st2.first + ' = ' + want + ', and you gave a ' + has + '.')
+        : verdict(false, code + '\n\nerror: ' + val + ' has type ' + has + '\n       but is expected to have type Answer ' + st2.first + '   (= ' + want + ')'));
+      $('s2-hint').textContent = 'The first value decides what the second must be.';
+    } else {
+      var code2 = '(' + st2.first + ', ' + val + ') : Bool × Nat';
+      out.replaceChildren(has === 'Nat'
+        ? verdict(true, code2 + '\n\nThe second slot is always Nat. The Bool changes nothing.')
+        : verdict(false, code2 + '\n\nerror: expected Nat. Flipping the Bool won\'t help: the type is fixed.'));
+      $('s2-hint').textContent = 'Ordinary pair: the first value has no say over the second type.';
+    }
+  }
+  [['s2-dep', true], ['s2-ord', false]].forEach(function (p) {
+    $(p[0]).addEventListener('click', function () {
+      st2.dep = p[1];
+      $('s2-dep').setAttribute('aria-pressed', String(p[1]));
+      $('s2-ord').setAttribute('aria-pressed', String(!p[1]));
+      draw2();
+    });
+  });
+  ['s2-first', 's2-second'].forEach(function (gid) {
+    var g = $(gid);
+    g.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        press(g, b);
+        if (gid === 's2-first') st2.first = b.dataset.v; else st2.second = b.dataset.v;
+        draw2();
+      });
+    });
+  });
+  draw2();
+
+  /* ---------- 3. lengths ---------- */
+  var st3 = { n: 3, k: 2 };
+  var nGroup = $('s3-n');
+  for (var i = 0; i <= 5; i++) {
+    var nb = document.createElement('button');
+    nb.type = 'button'; nb.id = 's3-n' + i; nb.dataset.v = String(i); nb.textContent = String(i);
+    nGroup.append(nb);
+  }
+  nGroup.querySelectorAll('button').forEach(function (b) {
+    b.addEventListener('click', function () { st3.n = Number(b.dataset.v); draw3(); });
+  });
+  $('s3-minus').addEventListener('click', function () { st3.k = Math.max(0, st3.k - 1); draw3(); });
+  $('s3-plus').addEventListener('click', function () { st3.k = Math.min(7, st3.k + 1); draw3(); });
+  function draw3() {
+    nGroup.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.dataset.v) === st3.n)); });
+    var boxes = $('s3-boxes');
+    boxes.replaceChildren();
+    var top = Math.max(st3.n, st3.k);
+    for (var j = 0; j < top; j++) {
+      var c = document.createElement('div');
+      if (j < st3.k) { c.className = 'cell' + (j >= st3.n ? ' extra' : ''); c.textContent = String(j + 1); }
+      else { c.className = 'cell hole'; c.textContent = '?'; }
+      boxes.append(c);
+    }
+    var xs = []; for (var m = 1; m <= st3.k; m++) xs.push(m);
+    var lit = '#v[' + xs.join(', ') + ']';
+    var code = '⟨' + st3.n + ', ' + lit + '⟩ : (n : Nat) × Vector Nat n';
+    $('s3-out').replaceChildren(st3.k === st3.n
+      ? verdict(true, code)
+      : verdict(false, code + '\n\nerror: ' + lit + ' has type Vector Nat ' + st3.k + '\n       but is expected to have type Vector Nat ' + st3.n));
+  }
+  draw3();
+
+  /* ---------- 4. sigma vs pi ---------- */
+  var st4 = { pi: false, pick: 'true' };
+  function draw4() {
+    $('s4-sig').setAttribute('aria-pressed', String(!st4.pi));
+    $('s4-pi').setAttribute('aria-pressed', String(st4.pi));
+    ['true', 'false'].forEach(function (v) {
+      var r = $('s4-r-' + v);
+      var on = st4.pi || st4.pick === v;
+      r.classList.toggle('on', on);
+      r.classList.toggle('off', !on);
+      r.disabled = st4.pi;
+    });
+    if (st4.pi) {
+      $('s4-hint').textContent = 'A function must handle every input. Both rows are required.';
+      $('s4-code').textContent = 'def all : (b : Bool) → Answer b\n  | true  => (42 : Nat)\n  | false => "hi"';
+      $('s4-logic').textContent = 'Π  ≈  ∀  "for every b, here is an Answer b"';
+    } else {
+      $('s4-hint').textContent = 'A pair picks one input and answers just that one. Click the other row.';
+      $('s4-code').textContent = st4.pick === 'true'
+        ? 'def p : (b : Bool) × Answer b := ⟨true, (42 : Nat)⟩'
+        : 'def p : (b : Bool) × Answer b := ⟨false, "hi"⟩';
+      $('s4-logic').textContent = 'Σ  ≈  ∃  "here is some b, and an Answer b for it"';
+    }
+  }
+  $('s4-sig').addEventListener('click', function () { st4.pi = false; draw4(); });
+  $('s4-pi').addEventListener('click', function () { st4.pi = true; draw4(); });
+  ['true', 'false'].forEach(function (v) {
+    $('s4-r-' + v).addEventListener('click', function () { st4.pick = v; draw4(); });
+  });
+  draw4();
+
+  /* ---------- 5. exists ---------- */
+  var g5 = $('s5-n');
+  for (var q = 1; q <= 9; q++) {
+    var qb = document.createElement('button');
+    qb.type = 'button'; qb.id = 's5-n' + q; qb.dataset.v = String(q); qb.textContent = String(q);
+    g5.append(qb);
+  }
+  function draw5(n) {
+    g5.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.dataset.v) === n)); });
+    var out = $('s5-out');
+    if (!n) { out.replaceChildren(verdict(false, 'No witness yet. Pick a number.')); return; }
+    var code = 'example : ∃ n : Nat, n * n = 49 := ⟨' + n + ', rfl⟩';
+    out.replaceChildren(n * n === 49
+      ? verdict(true, code + '\n\nwitness: ' + n + '\nevidence: ' + n + ' * ' + n + ' = 49 ✓\n\nThe proof is literally a pair: ⟨value, evidence about that value⟩.')
+      : verdict(false, code + '\n\nerror: rfl … is expected to have type ' + n + ' * ' + n + ' = 49\n(' + n + ' * ' + n + ' = ' + (n * n) + ', so no evidence exists for this witness)'));
+  }
+  g5.querySelectorAll('button').forEach(function (b) {
+    b.addEventListener('click', function () { draw5(Number(b.dataset.v)); });
+  });
+  draw5(0);
+
+  /* ---------- 6. decoder ---------- */
+  var notes = {
+    def: 'Two names, d and w, for the same kind of thing.',
+    sig: 'The type: "some a from α, plus something of type β a." The second type mentions a, so it depends on it. Exactly like (b : Bool) × Answer b in step 2.',
+    sigma: 'The same type, written with Σ. Lean treats this and the × version as identical.',
+    mk: 'Build the pair. ⟨…⟩ is shorthand for the constructor, Sigma.mk.',
+    smk: 'The same pair, built with the constructor\'s real name.',
+    alpha: 'α is where the first value comes from. In step 2 it was Bool; in step 3 it was Nat.',
+    beta: 'β is the type machine from step 1: give it a value, get a type. Answer and Vector Nat were examples.',
+    b: 'b must have type β a, the type the machine gives for that particular a. That is the check you saw fail in steps 2 and 3.'
+  };
+  var code6 = $('s6-code');
+  code6.querySelectorAll('button').forEach(function (b, idx) {
+    b.id = 's6-' + idx;
+    b.addEventListener('click', function () {
+      code6.querySelectorAll('button').forEach(function (o) { o.setAttribute('aria-pressed', String(o.dataset.k === b.dataset.k)); });
+      $('s6-explain').textContent = notes[b.dataset.k];
+    });
+  });
+  code6.querySelector('[data-k="sig"]').click();
+
+  var saved = 0;
+  try { saved = Number(localStorage.getItem('dp-step')) || 0; } catch (e) {}
+  go(saved);
+})();
+</script>
+
+</html>
