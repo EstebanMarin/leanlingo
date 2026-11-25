@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type Theory for Engineers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of diagrams on cool proof-paper, each section = one picture + one sentence. Teal = programs/values, amber = types/specs. */
+:root {
+  --paper: #f2f4f6;
+  --sheet: #fbfcfd;
+  --ink: #18202b;
+  --muted: #5a6573;
+  --rule: #d6dbe2;
+  --alpha: #0d7a74;
+  --alpha-soft: #d7efec;
+  --beta: #a85d00;
+  --beta-soft: #f8e8d2;
+  --bad: #b3261e;
+  --bad-soft: #f9dedc;
+  --code-bg: #e9edf2;
+  --f-display: "STIX Two Text", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+    --alpha: #4fc7bd; --alpha-soft: #143532; --beta: #f0a542; --beta-soft: #3a2a12;
+    --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+  --alpha: #4fc7bd; --alpha-soft: #143532; --beta: #f0a542; --beta-soft: #3a2a12;
+  --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 16px/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 820px; margin: 0 auto; display: grid; gap: 44px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h1, h2 { font-family: var(--f-display); font-weight: 600; margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 6.5vw, 3rem); }
+h2 { font-size: 1.55rem; }
+p { margin: 0; max-width: 62ch; }
+.eyebrow { font: 600 0.75rem/1 var(--f-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.a { color: var(--alpha); font-weight: 600; }
+.b { color: var(--beta); font-weight: 600; }
+code, pre { font-family: var(--f-mono); font-size: 0.86em; }
+p code, td code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+pre.code { margin: 0; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; min-width: 0; }
+pre .c { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--alpha); outline-offset: 2px; }
+
+.diagram { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; overflow-x: auto; }
+.diagram pre.mermaid { margin: 0; background: transparent; text-align: center; font-family: var(--f-body); }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.side { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.side .tag { font: 600 0.75rem/1 var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.side.ts .tag { color: var(--muted); }
+.side.lean .tag { color: var(--alpha); }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+
+/* translator */
+.tr-wrap { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--rule); vertical-align: top; }
+thead th { border-top: 0; font: 600 0.72rem var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--paper); }
+tbody tr[aria-selected="true"] { background: var(--beta-soft); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td.mono { font-family: var(--f-mono); font-size: 0.85rem; white-space: nowrap; }
+.why { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; background: var(--sheet); border: 1px solid var(--rule); border-left: 3px solid var(--beta); border-radius: 0 10px 10px 0; padding: 14px 16px; }
+.why .big { font-family: var(--f-display); font-size: 1.8rem; line-height: 1; color: var(--beta); min-width: 1.4em; text-align: center; }
+.why pre.code { margin-top: 8px; }
+
+.takeaways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tk { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 6px; align-content: start; }
+.tk .lhs { font-family: var(--f-mono); font-size: 0.85rem; color: var(--muted); }
+.tk .rhs { font-weight: 600; }
+@media (max-width: 640px) { .takeaways { grid-template-columns: 1fr; } }
+
+.foot { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; }
+.foot a { color: var(--alpha); }
+</style>
+
+<main>
+
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Intuitionistic type theory, as seen from a compiler</div>
+  <h1>Type Theory for Engineers</h1>
+  <p>One rule runs everything in Lean: <span class="b">a type is a spec</span>, <span class="a">a value of that type is an implementation</span>, and the type checker decides if it fits. Proofs are just another kind of value.</p>
+</header>
+
+<section>
+  <div class="eyebrow">The big picture</div>
+  <h2>Three views of one thing</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  L["Logic<br/>a statement P"] <--> T["Types<br/>a type P"]
+  T <--> C["Programs<br/>a value h : P"]
+  C <--> L
+  T -.-> K{"Type checker:<br/>does h have type P?"}
+  K -- yes --> OK["P is proven ✓"]
+  K -- no --> ER["compile error ✗"]
+</pre>
+  </div>
+  <p>This is the Curry–Howard correspondence. Writing a proof and writing a well-typed program are the <em>same activity</em>.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Click a row</div>
+  <h2>Logic → types you already know</h2>
+  <div class="tr-wrap">
+    <table>
+      <thead><tr><th>Logic</th><th>Engineer's type</th><th>Lean</th><th>A proof is…</th></tr></thead>
+      <tbody id="tr">
+        <tr data-k="and" aria-selected="true"><td>P and Q</td><td class="mono">[P, Q]  (tuple)</td><td class="mono">P ∧ Q</td><td>a pair of proofs</td></tr>
+        <tr data-k="or"><td>P or Q</td><td class="mono">Either&lt;P, Q&gt;</td><td class="mono">P ∨ Q</td><td>a tagged proof of one side</td></tr>
+        <tr data-k="imp"><td>P implies Q</td><td class="mono">(p: P) =&gt; Q</td><td class="mono">P → Q</td><td>a function</td></tr>
+        <tr data-k="true"><td>True</td><td class="mono">void / unit</td><td class="mono">True</td><td>the one trivial value</td></tr>
+        <tr data-k="false"><td>False</td><td class="mono">never</td><td class="mono">False</td><td>impossible to build</td></tr>
+        <tr data-k="not"><td>not P</td><td class="mono">(p: P) =&gt; never</td><td class="mono">¬P</td><td>a function into never</td></tr>
+        <tr data-k="all"><td>for all x, P x</td><td class="mono">generic fn over every x</td><td class="mono">∀ x, P x</td><td>Π: a dependent function</td></tr>
+        <tr data-k="ex"><td>exists x, P x</td><td class="mono">{ x, evidence }</td><td class="mono">∃ x, P x</td><td>Σ: a dependent pair</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="why" aria-live="polite"><div class="big" id="why-sym">∧</div><div><p id="why-text"></p><pre class="code" id="why-code"></pre></div></div>
+</section>
+
+<section>
+  <div class="eyebrow">What happens when you save</div>
+  <h2>How Lean checks your file</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  SRC["Your .lean file<br/>def, theorem, by simp"] --> P["Parser"]
+  IMP["import Mathlib<br/>prebuilt .olean files"] --> E
+  P --> E["Elaborator<br/>fills in implicit args, _, type classes<br/>runs tactics like simp, decide"]
+  E --> CORE["Core term<br/>tiny language: λ, Π, Σ via inductives,<br/>application, universes"]
+  CORE --> KER{"Kernel<br/>small trusted type checker"}
+  KER -- accepted --> OUT[".olean<br/>reusable by other files"]
+  KER -- rejected --> ERR["error in your editor"]
+</pre>
+  </div>
+  <p>Tactics are code generators: <code>by simp</code> writes a proof term for you. The elaborator is big and clever; the <span class="b">kernel</span> is small, and it re-checks every term, so a bug in a tactic can't sneak a false proof through.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Types have types</div>
+  <h2>The universe ladder</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  v["42"] -- ":" --> N["Nat"]
+  N -- ":" --> T0["Type"]
+  T0 -- ":" --> T1["Type 1"]
+  T1 -- ":" --> T2["Type 2  …"]
+  h["proof h"] -- ":" --> P["2 + 2 = 4"]
+  P -- ":" --> PR["Prop"]
+  PR -- ":" --> T0
+</pre>
+  </div>
+  <p><code>Type : Type</code> would allow a paradox, like a set containing itself. So every rung gets its own level. That's what <code>universe u v</code> in your code is about: write it once, work on every rung.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Σ is a tagged union</div>
+  <h2>You've written dependent pairs before</h2>
+  <div class="pair">
+    <div class="side ts"><div class="tag">TypeScript</div>
+<pre class="code">type Answer =
+  | { tag: true;  value: number }
+  | { tag: false; value: string }
+
+<span class="c">// the tag decides the value's type</span></pre>
+    </div>
+    <div class="side lean"><div class="tag">Lean</div>
+<pre class="code">def Answer : Bool → Type
+  | true  => Nat
+  | false => String
+
+<span class="c">-- same idea, as a Σ type</span>
+#check (b : Bool) × Answer b</pre>
+    </div>
+  </div>
+  <p>TypeScript hand-lists every case. Lean <em>computes</em> the second type from the first value, so it works for infinitely many cases, like <code>(n : Nat) × Vector Nat n</code>.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Tests vs proofs</div>
+  <h2>A test checks some inputs. A proof checks all.</h2>
+  <div class="pair">
+    <div class="side ts"><div class="tag">Unit test</div>
+<pre class="code">test("add is commutative", () =&gt; {
+  expect(add(2, 3)).toBe(add(3, 2))
+  expect(add(0, 7)).toBe(add(7, 0))
+})
+<span class="c">// 2 inputs checked, infinitely many left</span></pre>
+    </div>
+    <div class="side lean"><div class="tag">Theorem</div>
+<pre class="code">theorem comm (a b : Nat) :
+    a + b = b + a :=
+  Nat.add_comm a b
+<span class="c">-- every a, every b. Checked at compile time.</span></pre>
+    </div>
+  </div>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  S["Spec<br/>∀ a b, a + b = b + a"] --> Q{"Did you write a value<br/>of this type?"}
+  Q -- yes --> D["Holds for all inputs, forever"]
+  Q -- no --> R["Won't compile"]
+</pre>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Keep this</div>
+  <h2>The whole thing in three lines</h2>
+  <div class="takeaways">
+    <div class="tk"><div class="lhs">writing a type</div><div class="rhs">= writing a spec</div></div>
+    <div class="tk"><div class="lhs">writing a value</div><div class="rhs">= implementing it, or proving it</div></div>
+    <div class="tk"><div class="lhs">type checking</div><div class="rhs">= verification, at compile time</div></div>
+  </div>
+</section>
+
+<p class="foot">Every Lean snippet here compiles on Lean 4.35.0. Background: <a href="https://en.wikipedia.org/wiki/Intuitionistic_type_theory">Intuitionistic type theory</a> · <a href="https://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence">Curry–Howard correspondence</a>. Lean's own theory (the Calculus of Inductive Constructions) adds a proof-irrelevant <code>Prop</code> and optional classical axioms on top.</p>
+
+</main>
+
+<script>
+(function () {
+  var info = {
+    and: ['∧', 'To prove both, hand over both proofs, packed in a pair. Exactly like returning a tuple.',
+      'example (hp : p) (hq : q) : p ∧ q := ⟨hp, hq⟩'],
+    or: ['∨', 'To prove one-or-the-other, pick a side and prove that one. Like returning Left or Right.',
+      'example (hp : p) : p ∨ q := Or.inl hp'],
+    imp: ['→', 'An implication is a function: give me a proof of P and I\'ll return a proof of Q. Using it is just calling it.',
+      'example (h : p → q) (hp : p) : q := h hp'],
+    true: ['⊤', 'True has exactly one proof, like unit. Nothing interesting to provide.',
+      'example : True := trivial'],
+    false: ['⊥', 'False has no proofs, like never. If you somehow hold one, you can return anything, because that code can never run.',
+      'example (h : False) : 1 = 2 := h.elim'],
+    not: ['¬', '"Not P" means "P → False": a function that would turn any proof of P into an impossible value.',
+      'example (hp : p) : ¬¬p := fun hnp => hnp hp'],
+    all: ['∀', 'A proof of "for all x" is a function that works for every x. This is a Π type: the result type depends on the input.',
+      'example : ∀ n : Nat, n + 0 = n := fun _ => rfl'],
+    ex: ['∃', 'A proof of "there exists" is a pair: a concrete witness plus evidence about it. This is a Σ type, the same thing as your d and w.',
+      'example : ∃ n : Nat, n * n = 49 := ⟨7, rfl⟩']
+  };
+  var rows = document.querySelectorAll('#tr tr');
+  function pick(k) {
+    rows.forEach(function (r) { r.setAttribute('aria-selected', String(r.dataset.k === k)); });
+    document.getElementById('why-sym').textContent = info[k][0];
+    document.getElementById('why-text').textContent = info[k][1];
+    document.getElementById('why-code').textContent = info[k][2];
+  }
+  rows.forEach(function (r) {
+    r.tabIndex = 0;
+    r.addEventListener('click', function () { pick(r.dataset.k); });
+    r.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(r.dataset.k); } });
+  });
+  pick('and');
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  // claude.ai draws mermaid blocks itself; a local copy needs the library.
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'neutral'
+  });
+</script>
+</html>

@@ -51,3 +51,5 @@ and *Theorem Proving in Lean 4*.
 
 - `docs/dependent-pairs.html`: an interactive walkthrough of dependent pairs
   (Σ types). Open it in a browser.
+- `docs/type-theory-engineers.html`: type theory and how Lean checks your
+  code, explained for software engineers, with diagrams.
