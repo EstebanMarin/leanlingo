@@ -450,6 +450,8 @@ def twice_double :=
 
 #eval twice_double 4
 
+namespace WithVariables
+
 variable (α β γ : Type)
 variable (g : β → γ) (f : α → β) (h : α → α)
 variable (x : α)
@@ -461,6 +463,8 @@ def doThrice := h (h (h x))
 #print compose
 #print doTwice
 #print doThrice
+
+end WithVariables
 
 section useful
   variable (α : Type) 
@@ -499,11 +503,9 @@ def d : (a : α) × β a :=
 def w : Σ a : α, β a :=
   Sigma.mk a b
 
-end DependentTypes 
+end DependentTypes
 
-universe u v
-
-section dep_implicit
+namespace Implicit
 
 variable {α : Type u}
 variable {β : α → Type v}
@@ -514,7 +516,7 @@ def d (a : α) (b : β a) : (a : α) × β a :=
 def w (a : α) (b : β a) : Σ a : α, β a :=
   ⟨a, b⟩
 
-end dep_implicit
+end Implicit
 
 
 #check @id'
