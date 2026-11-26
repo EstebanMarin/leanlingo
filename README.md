@@ -53,3 +53,5 @@ and *Theorem Proving in Lean 4*.
   (Σ types). Open it in a browser.
 - `docs/type-theory-engineers.html`: type theory and how Lean checks your
   code, explained for software engineers, with diagrams.
+- `docs/namespace-vs-section.html`: an interactive comparison of `namespace`
+  and `section`, built around the `compose` name clash.

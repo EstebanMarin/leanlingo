@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Namespace vs Section</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one playground (code on the left, Lean's verdict on the right), then a call-site explorer and a summary. Teal = namespace, amber = section. */
+:root {
+  --paper: #f2f4f6;
+  --sheet: #fbfcfd;
+  --ink: #18202b;
+  --muted: #5a6573;
+  --rule: #d6dbe2;
+  --ns: #0d7a74;
+  --ns-soft: #d7efec;
+  --sec: #a85d00;
+  --sec-soft: #f8e8d2;
+  --bad: #b3261e;
+  --bad-soft: #f9dedc;
+  --code-bg: #e9edf2;
+  --on-accent: #ffffff;
+  --f-display: "STIX Two Text", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+    --ns: #4fc7bd; --ns-soft: #143532; --sec: #f0a542; --sec-soft: #3a2a12;
+    --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; --on-accent: #0b1117; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11161d; --sheet: #171e27; --ink: #e4e9ef; --muted: #98a3b1; --rule: #2b3542;
+  --ns: #4fc7bd; --ns-soft: #143532; --sec: #f0a542; --sec-soft: #3a2a12;
+  --bad: #f2867d; --bad-soft: #3d1a18; --code-bg: #1d2530; --on-accent: #0b1117; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 16px/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 900px; margin: 0 auto; display: grid; gap: 40px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h1, h2 { font-family: var(--f-display); font-weight: 600; margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 6.5vw, 2.9rem); }
+h2 { font-size: 1.5rem; }
+p { margin: 0; max-width: 64ch; }
+.eyebrow { font: 600 0.75rem/1 var(--f-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.ns { color: var(--ns); font-weight: 600; }
+.sec { color: var(--sec); font-weight: 600; }
+code { font-family: var(--f-mono); font-size: 0.86em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--ns); outline-offset: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--sheet); }
+.seg button { border: 0; background: transparent; padding: 9px 16px; font-family: var(--f-mono); font-size: 0.88rem; font-weight: 600; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seg button[data-w="section"][aria-pressed="true"] { background: var(--sec); color: var(--on-accent); }
+.seg button[data-w="namespace"][aria-pressed="true"] { background: var(--ns); color: var(--on-accent); }
+
+/* playground */
+.play { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 720px) { .play { grid-template-columns: 1fr; } }
+.code {
+  background: var(--code-bg); border-radius: 10px; padding: 14px 0; overflow-x: auto;
+  font-family: var(--f-mono); font-size: 0.84rem; line-height: 1.6; min-width: 0;
+}
+.ln { display: block; padding: 0 16px; white-space: pre; }
+.ln.dim { color: var(--muted); }
+.ln.err { background: var(--bad-soft); }
+.ln.err::after { content: "  ✗"; color: var(--bad); font-weight: 600; }
+.wrapline { font-weight: 600; }
+.box { display: block; margin: 4px 10px; border-radius: 8px; padding: 6px 0; position: relative; }
+.box.section { border: 2px dashed var(--sec); background: var(--sec-soft); }
+.box.namespace { border: 2px solid var(--ns); background: var(--ns-soft); }
+.box.none { border: 2px solid transparent; }
+.box .ln { padding: 0 6px; }
+.box-label { display: block; font: 600 0.68rem/1.4 var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 6px 2px; }
+.box.section .box-label { color: var(--sec); }
+.box.namespace .box-label { color: var(--ns); }
+.box.none .box-label { color: var(--muted); }
+
+.checks { display: grid; gap: 10px; }
+.check { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.check .q { font-size: 0.82rem; color: var(--muted); }
+.check .ans { font-family: var(--f-mono); font-weight: 600; font-size: 0.95rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pill { font: 600 0.72rem/1 var(--f-body); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; }
+.pill.ok { background: var(--ns-soft); color: var(--ns); }
+.pill.no { background: var(--bad-soft); color: var(--bad); }
+.check .msg { font-family: var(--f-mono); font-size: 0.8rem; color: var(--bad); white-space: pre-wrap; overflow-wrap: anywhere; }
+.check .note { font-size: 0.86rem; }
+
+/* call sites */
+.calls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .calls { grid-template-columns: 1fr; } }
+.call { text-align: left; border: 1.5px solid var(--rule); background: var(--sheet); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.call .where { font-size: 0.78rem; color: var(--muted); }
+.call .src { font-family: var(--f-mono); font-size: 0.86rem; font-weight: 600; overflow-wrap: anywhere; }
+.call[aria-pressed="true"] { border-color: var(--ns); background: var(--ns-soft); }
+.result { background: var(--sheet); border: 1px solid var(--rule); border-left: 3px solid var(--ns); border-radius: 0 10px 10px 0; padding: 12px 16px; display: grid; gap: 6px; }
+.result.bad { border-left-color: var(--bad); }
+.result .r { font-family: var(--f-mono); font-weight: 600; font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.result.bad .r { color: var(--bad); }
+
+/* summary */
+.tbl { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.93rem; }
+th, td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--rule); }
+thead th { border-top: 0; font: 600 0.75rem var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; }
+thead th.s { color: var(--sec); }
+thead th.n { color: var(--ns); }
+td.y::before { content: "✓ "; color: var(--ns); font-weight: 600; }
+td.x::before { content: "✗ "; color: var(--bad); font-weight: 600; }
+
+.rule { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .rule { grid-template-columns: 1fr; } }
+.rule > div { border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; }
+.rule .rs { background: var(--sec-soft); }
+.rule .rn { background: var(--ns-soft); }
+.rule strong { font-family: var(--f-display); font-size: 1.15rem; }
+</style>
+
+<main>
+
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Lean 4 · scopes</div>
+  <h1>Namespace vs Section</h1>
+  <p>Both are <code>… end</code> blocks that limit where your <code>variable</code>s apply. Only a <span class="ns">namespace</span> also puts a prefix on the names you define inside it. Try it on your own <code>compose</code> clash.</p>
+</header>
+
+<section>
+  <div class="eyebrow">Playground</div>
+  <h2>Wrap the second <code>compose</code></h2>
+  <div class="seg" role="group" aria-label="Wrapper">
+    <button type="button" id="w-none" data-w="none">no wrapper</button>
+    <button type="button" id="w-section" data-w="section">section S</button>
+    <button type="button" id="w-namespace" data-w="namespace" aria-pressed="true">namespace N</button>
+  </div>
+  <div class="play">
+    <div class="code" id="code" aria-label="Lean code"></div>
+    <div class="checks" aria-live="polite">
+      <div class="check"><div class="q">Full name of the second <code>compose</code></div><div class="ans" id="c-name"></div></div>
+      <div class="check"><div class="q">Does it clash with the first <code>compose</code>?</div><div class="ans" id="c-clash"></div><div class="msg" id="c-clash-msg"></div></div>
+      <div class="check"><div class="q">Is <code>x</code> still a variable after the block?</div><div class="ans" id="c-var"></div><div class="note" id="c-var-note"></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Calling it</div>
+  <h2>Which <code>compose</code> do you get?</h2>
+  <p>Using the namespace version. Click a call site.</p>
+  <div class="calls" id="calls">
+    <button type="button" class="call" id="k-out-short" data-k="outShort"><span class="where">outside N</span><span class="src">compose ℕ ℕ ℕ id id 3</span></button>
+    <button type="button" class="call" id="k-out-full" data-k="outFull"><span class="where">outside N</span><span class="src">N.compose ℕ ℕ ℕ id id 3</span></button>
+    <button type="button" class="call" id="k-in-short" data-k="inShort"><span class="where">inside namespace N</span><span class="src">compose …</span></button>
+    <button type="button" class="call" id="k-open" data-k="open"><span class="where">after open N</span><span class="src">compose ℕ ℕ ℕ id id 3</span></button>
+  </div>
+  <div class="result" id="call-result" aria-live="polite"><div class="r" id="call-r"></div><div id="call-why"></div></div>
+</section>
+
+<section>
+  <div class="eyebrow">Side by side</div>
+  <h2>What each one does</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th class="s">section</th><th class="n">namespace</th></tr></thead>
+      <tbody>
+        <tr><td>Limits <code>variable</code> to the block</td><td class="y">yes</td><td class="y">yes</td></tr>
+        <tr><td>Limits <code>open</code> to the block</td><td class="y">yes</td><td class="y">yes</td></tr>
+        <tr><td>Adds a prefix to names (<code>N.compose</code>)</td><td class="x">no</td><td class="y">yes</td></tr>
+        <tr><td>Can have no name</td><td class="y">yes: <code>section … end</code></td><td class="x">no, needs a name</td></tr>
+        <tr><td><code>end</code> must repeat the name</td><td>only if it has one</td><td class="y">yes: <code>end N</code></td></tr>
+        <tr><td>Reopen later to add more</td><td>no names to add to</td><td class="y">yes: <code>namespace N</code> again</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Rule of thumb</div>
+  <div class="rule">
+    <div class="rs"><strong>section</strong><span>when you just want some <code>variable</code>s for a few definitions.</span></div>
+    <div class="rn"><strong>namespace</strong><span>when names could clash, or belong together (<code>Nat.add</code>, <code>List.map</code>).</span></div>
+  </div>
+  <p>That's the fix in your exercises: the second attempts now live in <code>namespace WithVariables</code> and <code>namespace Implicit</code>.</p>
+</section>
+
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  var FIRST = ['def compose (α β γ : Type) (g : β → γ) (f : α → β) (x : α) : γ :=', '  g (f x)'];
+  var BODY = ['variable (α β γ : Type) (g : β → γ) (f : α → β) (x : α)', 'def compose := g (f x)'];
+  var DATA = {
+    none: {
+      open: null, close: null, label: 'no wrapper',
+      name: 'compose', clash: true,
+      msg: 'error: `compose` has already been declared',
+      leaks: true, varNote: 'Yes. The variables apply to everything below, for the rest of the file or namespace.'
+    },
+    section: {
+      open: 'section S', close: 'end S', label: 'section S: variables end at end S',
+      name: 'compose', clash: true,
+      msg: 'error: `compose` has already been declared\n(and S.compose doesn\'t exist: sections add no prefix)',
+      leaks: false, varNote: 'No. The variables stop at end S.'
+    },
+    namespace: {
+      open: 'namespace N', close: 'end N', label: 'namespace N: names get the N. prefix',
+      name: 'N.compose', clash: false, msg: '',
+      leaks: false, varNote: 'No. The variables stop at end N.'
+    }
+  };
+
+  function draw(w) {
+    document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.w === w)); });
+    var d = DATA[w];
+    var code = $('code');
+    code.replaceChildren();
+    FIRST.forEach(function (l) { code.append(el('span', 'ln', l)); });
+    code.append(el('span', 'ln', ''));
+    var box = el('span', 'box ' + w);
+    box.append(el('span', 'box-label', d.label));
+    if (d.open) box.append(el('span', 'ln wrapline', d.open));
+    BODY.forEach(function (l, i) { box.append(el('span', 'ln' + (i === 1 && d.clash ? ' err' : ''), l)); });
+    if (d.close) box.append(el('span', 'ln wrapline', d.close));
+    code.append(box);
+    code.append(el('span', 'ln', ''));
+    code.append(el('span', 'ln dim', '#check x   -- ' + (d.leaks ? 'x : α   (still here)' : 'error: Unknown identifier `x`')));
+
+    var nm = $('c-name'); nm.replaceChildren(el('span', null, d.name));
+    if (w === 'section') nm.append(el('span', 'pill no', 'no prefix'));
+    if (w === 'namespace') nm.append(el('span', 'pill ok', 'prefixed'));
+
+    var cl = $('c-clash'); cl.replaceChildren(el('span', 'pill ' + (d.clash ? 'no' : 'ok'), d.clash ? 'clash' : 'no clash'));
+    $('c-clash-msg').textContent = d.msg;
+
+    var cv = $('c-var'); cv.replaceChildren(el('span', 'pill ' + (d.leaks ? 'no' : 'ok'), d.leaks ? 'leaks out' : 'contained'));
+    $('c-var-note').textContent = d.varNote;
+    try { localStorage.setItem('nvs-w', w); } catch (e) {}
+  }
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () { draw(b.dataset.w); });
+  });
+
+  var CALLS = {
+    outShort: ['→ the first compose (top level)', 'Outside N, the short name only finds the one that was never wrapped.', false],
+    outFull: ['→ N.compose (the second one)', 'The full name always works, from anywhere.', false],
+    inShort: ['→ N.compose (the second one)', 'Inside namespace N, Lean looks in N first, so the inner one wins.', false],
+    open: ['error: Ambiguous term\n  compose\nPossible interpretations:\n  _root_.compose …\n  N.compose …', 'open N brings N.compose into view, and now two names fit. Use the full name, or don\'t open N here.', true]
+  };
+  var calls = document.querySelectorAll('#calls .call');
+  function pickCall(k) {
+    calls.forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.k === k)); });
+    $('call-r').textContent = CALLS[k][0];
+    $('call-why').textContent = CALLS[k][1];
+    $('call-result').classList.toggle('bad', CALLS[k][2]);
+  }
+  calls.forEach(function (c) { c.addEventListener('click', function () { pickCall(c.dataset.k); }); });
+
+  var start = 'namespace';
+  try { start = localStorage.getItem('nvs-w') || 'namespace'; } catch (e) {}
+  if (!DATA[start]) start = 'namespace';
+  draw(start);
+  pickCall('open');
+})();
+</script>
